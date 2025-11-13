@@ -37,7 +37,7 @@ public class Compiler {
 	static String objectName = "obj.tam";
 
 	private static boolean showStats = false;
-    static boolean showTree = false;
+	static boolean showTree = false;
 	static boolean folding = false;
 
 	private static Scanner scanner;
@@ -99,12 +99,12 @@ public class Compiler {
 				theAST.visit(new ConstantFolder());
 			}
 			if (showStats) {
-    var stats = new triangle.optimiser.StatsCounter();
-    theAST.visit(stats);
-    System.out.println("=== Program statistics ===");
-    System.out.println("CharacterExpressions: " + stats.getNumCharacterExpressions());
-    System.out.println("IntegerExpressions:   " + stats.getNumIntegerExpressions());
-}
+				var stats = new triangle.optimiser.StatsCounter();
+				theAST.visit(stats);
+				System.out.println("=== Program statistics ===");
+				System.out.println("CharacterExpressions: " + stats.getNumCharacterExpressions());
+				System.out.println("IntegerExpressions:   " + stats.getNumIntegerExpressions());
+			}
 			if (reporter.getNumErrors() == 0) {
 				System.out.println("Code Generation ...");
 				encoder.encodeRun(theAST, showingTable); // 3rd pass
@@ -133,18 +133,18 @@ public class Compiler {
 			System.out.println("Usage: tc filename [-o=outputfilename] [tree] [folding]");
 			System.exit(1);
 		}
-		
+
 		parseArgs(args);
 
 		String sourceName = args[0];
-		
+
 		var compiledOK = compileProgram(sourceName, objectName, showTree, false);
 
 		if (!showTree) {
 			System.exit(compiledOK ? 0 : 1);
 		}
 	}
-	
+
 	private static void parseArgs(String[] args) {
 		for (String s : args) {
 			var sl = s.toLowerCase();
@@ -155,9 +155,8 @@ public class Compiler {
 			} else if (sl.equals("folding")) {
 				folding = true;
 			} else if (sl.equals("showstats")) {
-    showStats = true;
-}
-
+				showStats = true;
+			}
 
 		}
 	}
