@@ -1,0 +1,5 @@
+I apologise, I was unable to upload my assignment to GitHub on time for a number of reasons. However, I managed to upload it to Canvas on time.
+I kept the project and updated it on a USB stick. 
+It is my fault that I left the assignment upload to the last minute, and at that last minute, my Wi-Fi at home went down and I was unable to upload the files from my PC to GitHub. 
+I went to the university and, almost late, uploaded the assignment to Canvas. There was not enough time to set up Git and GitHub on the university computer. 
+I apologise once again.
