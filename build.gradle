@@ -4,17 +4,24 @@ java {
     sourceCompatibility = 21
 }
 
+repositories {
+    mavenCentral()
+}
+
 subprojects.each { subproject ->
-  evaluationDependsOn(subproject.path)
+    evaluationDependsOn(subproject.path)
 }
 
 jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    
+
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
 
 
-  from subprojects.sourceSets.main.output
+    from subprojects.sourceSets.main.output
+}
+dependencies {
+    implementation 'com.github.spullara.cli-parser:cli-parser:1.1.6'
 }

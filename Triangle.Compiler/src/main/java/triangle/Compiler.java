@@ -35,8 +35,9 @@ public class Compiler {
 
 	/** The filename for the object program, normally obj.tam. */
 	static String objectName = "obj.tam";
-	
-	static boolean showTree = false;
+
+	private static boolean showStats = false;
+    static boolean showTree = false;
 	static boolean folding = false;
 
 	private static Scanner scanner;
@@ -97,7 +98,13 @@ public class Compiler {
 			if (folding) {
 				theAST.visit(new ConstantFolder());
 			}
-			
+			if (showStats) {
+    var stats = new triangle.optimiser.StatsCounter();
+    theAST.visit(stats);
+    System.out.println("=== Program statistics ===");
+    System.out.println("CharacterExpressions: " + stats.getNumCharacterExpressions());
+    System.out.println("IntegerExpressions:   " + stats.getNumIntegerExpressions());
+}
 			if (reporter.getNumErrors() == 0) {
 				System.out.println("Code Generation ...");
 				encoder.encodeRun(theAST, showingTable); // 3rd pass
@@ -147,7 +154,11 @@ public class Compiler {
 				objectName = s.substring(3);
 			} else if (sl.equals("folding")) {
 				folding = true;
-			}
+			} else if (sl.equals("showstats")) {
+    showStats = true;
+}
+
+
 		}
 	}
 }

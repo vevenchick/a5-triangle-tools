@@ -274,26 +274,64 @@ public class ConstantFolder implements ActualParameterVisitor<Void, AbstractSynt
 	}
 
 	@Override
-	public AbstractSyntaxTree visitBinaryExpression(BinaryExpression ast, Void arg) {
-		AbstractSyntaxTree replacement1 = ast.E1.visit(this);
-		AbstractSyntaxTree replacement2 = ast.E2.visit(this);
-		ast.O.visit(this);
+public AbstractSyntaxTree visitBinaryExpression(BinaryExpression ast, Void arg) {
+    // Fold children first (this visitor may return replacements)
+    if (ast.E1 != null) {
+        AbstractSyntaxTree r1 = ast.E1.visit(this);
+        if (r1 != null) ast.E1 = (Expression) r1;
+    }
+    if (ast.E2 != null) {
+        AbstractSyntaxTree r2 = ast.E2.visit(this);
+        if (r2 != null) ast.E2 = (Expression) r2;
+    }
 
-		// if visiting a child node returns something, it's either the original constant
-		// (IntegerLiteral) or a folded version replacing the expression at that child
-		// node
-		// If both child nodes are not null; return a folded version of this
-		// BinaryExpression
-		// Otherwise, at least one child node isn't constant (foldable) so just replace
-		// the
-		// foldable child nodes with their folded equivalent and return null
-		if (replacement1 != null && replacement2 != null) {
-			return foldBinaryExpression(replacement1, replacement2, ast.O);
-		} else if (replacement1 != null) {
-			ast.E1 = (Expression) replacement1;
-		} else if (replacement2 != null) {
-			ast.E2 = (Expression) replacement2;
-		}
+    // Only fold when both sides are IntegerExpression literals
+    boolean e1IsInt = (ast.E1 instanceof IntegerExpression);
+    boolean e2IsInt = (ast.E2 instanceof IntegerExpression);
+
+    if (e1IsInt && e2IsInt) {
+        int v1 = Integer.parseInt(((IntegerExpression) ast.E1).IL.spelling);
+        int v2 = Integer.parseInt(((IntegerExpression) ast.E2).IL.spelling);
+        String op = ast.O.spelling;
+
+        // Arithmetic folding (+ - * /)
+        if (op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/")) {
+            int r;
+            switch (op) {
+                case "+": r = v1 + v2; break;
+                case "-": r = v1 - v2; break;
+                case "*": r = v1 * v2; break;
+                case "/": r = (v2 == 0) ? v1 /* or choose not to fold */ : v1 / v2; break;
+                default:  r = v1;
+            }
+            IntegerLiteral il = new IntegerLiteral(Integer.toString(r), ast.getPosition());
+            IntegerExpression ie = new IntegerExpression(il, ast.getPosition());
+            ie.type = StdEnvironment.integerType;
+            return ie;
+        }
+
+        // Boolean folding for integer comparisons (= < <= > >= \=)
+        boolean result;
+        switch (op) {
+            case "=":   result = (v1 == v2); break;
+            case "<":   result = (v1 <  v2); break;
+            case "<=":  result = (v1 <= v2); break;
+            case ">":   result = (v1 >  v2); break;
+            case ">=":  result = (v1 >= v2); break;
+            case "\\=": result = (v1 != v2); break; // Triangle "not equal"
+            default:
+                return null; // not a foldable operator here
+        }
+
+        // Build VnameExpression(true/false) bound to StdEnvironment decls
+        String spelling = result ? "true" : "false";
+        Identifier id = new Identifier(spelling, ast.getPosition());
+        id.decl = result ? StdEnvironment.trueDecl : StdEnvironment.falseDecl;
+        SimpleVname sv = new SimpleVname(id, ast.getPosition());
+        VnameExpression ve = new VnameExpression(sv, ast.getPosition());
+        ve.type = StdEnvironment.booleanType;  // important: set type because folding runs after checking
+        return ve;
+    }
 
 		// if we get here, we can't fold any higher than this level
 		return null;

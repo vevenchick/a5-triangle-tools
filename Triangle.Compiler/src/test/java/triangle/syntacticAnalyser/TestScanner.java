@@ -115,5 +115,24 @@ public class TestScanner {
 		// currently this program will fail
 		assertNotEquals("Problem compiling " + filename, 0, reporter.getNumErrors());
 	}
+ @Test
+    public void testDoublePostfixOperator() {
+        compileExpectSuccess("/double.tri");
+    }
+
+
+
+   @Test
+     public void testLoopWhileDoCompiles() {
+     compileExpectSuccess("/loopwhile.tri");
+    }
+
+	@Test
+      public void testWhileWithCurlyBlockCompiles() {
+     compileExpectSuccess("/while-curly.tri");
+    }
 
 }
+
+
+   

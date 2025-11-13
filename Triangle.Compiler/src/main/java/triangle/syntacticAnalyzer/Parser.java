@@ -280,30 +280,103 @@ public class Parser {
 		switch (currentToken.kind) {
 
 		case IDENTIFIER: {
-			Identifier iAST = parseIdentifier();
-			if (currentToken.kind == Token.Kind.LPAREN) {
-				acceptIt();
-				ActualParameterSequence apsAST = parseActualParameterSequence();
-				accept(Token.Kind.RPAREN);
-				finish(commandPos);
-				commandAST = new CallCommand(iAST, apsAST, commandPos);
+    Identifier iAST = parseIdentifier();
+    if (currentToken.kind == Token.Kind.LPAREN) {
+        acceptIt();
+        ActualParameterSequence apsAST = parseActualParameterSequence();
+        accept(Token.Kind.RPAREN);
+        finish(commandPos);
+        commandAST = new CallCommand(iAST, apsAST, commandPos);
 
-			} else {
+    } else {
 
-				Vname vAST = parseRestOfVname(iAST);
-				accept(Token.Kind.BECOMES);
-				Expression eAST = parseExpression();
-				finish(commandPos);
-				commandAST = new AssignCommand(vAST, eAST, commandPos);
-			}
-		}
-			break;
+        Vname vAST = parseRestOfVname(iAST);
+
+        // Postfix doubling:  a**;   ==>   a := a * 2;
+        // We only transform if the scanner produced a single OPERATOR token with spelling "**".
+        // (No errors for a single '*' — we simply fall back to normal assignment parsing.)
+        if (currentToken.kind == Token.Kind.OPERATOR && "**".equals(currentToken.spelling)) {
+            // consume the '**'
+            acceptIt();
+
+            SourcePosition exprPos = new SourcePosition();
+            start(exprPos);
+
+            // Build RHS: (vAST) * 2
+            VnameExpression vAsExpr = new VnameExpression(vAST, exprPos);
+            Operator times = new Operator("*", exprPos);
+            IntegerLiteral two = new IntegerLiteral("2", exprPos);
+            IntegerExpression twoExpr = new IntegerExpression(two, exprPos);
+            Expression rhs = new BinaryExpression(vAsExpr, times, twoExpr, exprPos);
+
+            finish(exprPos);
+            finish(commandPos);
+            commandAST = new AssignCommand(vAST, rhs, commandPos);
+            break;
+        }
+
+        // Default path: standard assignment
+        accept(Token.Kind.BECOMES);
+        Expression eAST = parseExpression();
+        finish(commandPos);
+        commandAST = new AssignCommand(vAST, eAST, commandPos);
+    }
+}
+break;
 
 		case BEGIN:
 			acceptIt();
 			commandAST = parseCommand();
 			accept(Token.Kind.END);
 			break;
+			
+			case LCURLY: {
+    // { C } — treat exactly like 'begin C end'
+    acceptIt(); // consume '{'
+    Command inner = parseCommand();
+    accept(Token.Kind.RCURLY); // consume '}'
+    finish(commandPos);
+    commandAST = inner;
+                    }
+              break;
+
+
+
+		case LOOP: {
+    acceptIt(); // consume 'loop'
+
+    // Parse C1
+    Command c1AST = parseSingleCommand();
+
+    // Parse 'while' E 'do' C2
+    accept(Token.Kind.WHILE);
+    Expression eAST = parseExpression();
+    accept(Token.Kind.DO);
+    Command c2AST = parseSingleCommand();
+
+    // Desugar:
+    // loop C1 while E do C2
+    // =>
+    // C1;
+    // while E do (C2; C1)
+
+    SourcePosition bodyPos = new SourcePosition();
+    start(bodyPos);
+
+    // inner body = (C2 ; C1)
+    SequentialCommand innerBody = new SequentialCommand(c2AST, c1AST, bodyPos);
+
+    // WHILE E DO innerBody
+    WhileCommand whileCmd = new WhileCommand(eAST, innerBody, bodyPos);
+
+    // overall = (C1 ; while E do innerBody)
+    SourcePosition commandPos2 = new SourcePosition();
+    start(commandPos2);
+    finish(commandPos2);
+    commandAST = new SequentialCommand(c1AST, whileCmd, commandPos2);
+}
+break;
+	
 
 		case LET: {
 			acceptIt();
@@ -341,6 +414,7 @@ public class Parser {
 		case END:
 		case ELSE:
 		case IN:
+		case RCURLY:
 		case EOT:
 
 			finish(commandPos);
